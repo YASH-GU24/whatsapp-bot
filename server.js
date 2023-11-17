@@ -1,12 +1,19 @@
 const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 const fs = require('fs');
-const { Client } = require('whatsapp-web.js');
-const { get_reply } = require('./chat_gpt.js');
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const { get_reply,get_answer } = require('./gpt_interaction.js');
 const { MessageMedia } = require('whatsapp-web.js');
 const { get_aukaat_meme } = require('./meme.js')
 
-const client = new Client();
+const client = new Client({
+    authStrategy: new LocalAuth(),
+    // proxyAuthentication: { username: 'username', password: 'password' },
+    puppeteer: { 
+        // args: ['--proxy-server=proxy-server-that-requires-authentication.example.com'],
+        headless: false
+    }
+});
 
 client.on('qr', qr => {
     qrcode.generate(qr, {small: true});
@@ -47,6 +54,22 @@ client.on('message', async msg => {
         response.then((data)=>{
             msg.reply(data.choices[0].message.content);
         })
+    }
+    else if (msg.body=='!answer') {
+        try {
+            const media = await msg.downloadMedia();
+            const folder = process.cwd() + '/img/';
+            const filename = folder +  'temp.' + media.mimetype.split('/')[1];
+            fs.mkdirSync(folder, { recursive: true });
+            fs.writeFileSync(filename, Buffer.from(media.data, 'base64').toString('binary'), 'binary');
+            response =get_answer(filename)
+            console.log(response)
+            response.then((data)=>{
+                msg.reply(data.choices[0].message.content);
+            })
+        } catch (e) {
+           console.log(e)
+        }
     }
     else if (msg.body.startsWith('!aukaat ')) {
         // Direct send a new message to specific id
