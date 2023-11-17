@@ -1,0 +1,19 @@
+{
+  "name": "whatsapp-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "openai": "^4.19.0",
+    "qrcode-terminal": "^0.12.0",
+    "text-on-gif": "^2.0.13",
+    "whatsapp-web.js": "^1.23.0"
+  }
+}
