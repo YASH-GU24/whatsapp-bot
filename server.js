@@ -4,7 +4,7 @@ const fs = require('fs');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const { get_reply,get_answer } = require('./gpt_interaction.js');
 const { MessageMedia } = require('whatsapp-web.js');
-const { get_aukaat_meme } = require('./meme.js')
+const { get_aukaat_meme,generate_tweet } = require('./meme.js')
 
 // const client = new Client({
 //     authStrategy: new LocalAuth(),
@@ -55,6 +55,33 @@ client.on('message', async msg => {
         response.then((data)=>{
             msg.reply(data.choices[0].message.content);
         })
+    }
+    else if (msg.body.startsWith('!tweet ')) {
+        const tweetString = msg.body;
+
+        const tweetRegex = /^!tweet (\w+) (.+)$/;
+        
+        // Use the exec method to match the pattern against the tweet string
+        const match = tweetRegex.exec(tweetString);
+        
+        // Check if there is a match
+        if (match) {
+          // Extract user_name and body from the matched groups
+          const userName = match[1];
+          const body = match[2];
+          response = generate_tweet(userName,body)
+          response.then(()=>{
+            const mediaData = fs.readFileSync('memes/tweet/tweet.png');
+            const media = new MessageMedia(
+            'image/png',
+            mediaData.toString("base64")
+            );
+            msg.reply(media)
+          })
+        } else {
+          msg.reply('Please follow !tweet <username> <body> format')
+        }
+
     }
     else if (msg.body=='!answer') {
         try {
