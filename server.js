@@ -5,7 +5,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const { get_reply,get_answer } = require('./gpt_interaction.js');
 const { MessageMedia } = require('whatsapp-web.js');
 const { get_aukaat_meme,generate_tweet } = require('./meme.js')
-
+const {download_from_query} = require('./yt_download.js')
 // const client = new Client({
 //     authStrategy: new LocalAuth(),
 //     // proxyAuthentication: { username: 'username', password: 'password' },
@@ -36,7 +36,6 @@ client.on('ready', () => {
 });
 
 client.on('message', async msg => {
-    console.log('MESSAGE RECEIVED', msg);
 
     if (msg.body === '!ping reply') {
         // Send a new message as a reply to the current one
@@ -49,7 +48,6 @@ client.on('message', async msg => {
     } 
     
     else if (msg.body.startsWith('!gpt ')) {
-        // Direct send a new message to specific id
         let message = msg.body.slice(5);
         response = get_reply(message)
         response.then((data)=>{
@@ -137,10 +135,33 @@ client.on('message', async msg => {
         client.sendMessage(number, message);
 
     } 
-    else if (msg.body.startsWith('!gpt ')) {
-        // Direct send a new message to specific id
-        let msg = msg.body.split(' ')[1];
-
+    else if (msg.body.startsWith('!song ')) {
+        let query = msg.body.slice(6);
+        download_from_query(query, 'audio').then((data) => {
+            console.log('data',data);
+            if (data) {
+                try{
+                const media = MessageMedia.fromFilePath(data+'.mp3')
+                client.sendMessage(msg.from, media, { sendMediaAsDocument: true })
+                fs.unlink(data+'.mp3', (err) => {
+                    if (err) {
+                      console.error(`Error deleting file: ${data}`);
+                    } else {
+                      console.log(`File ${data} deleted successfully`);
+                    }
+                  });
+                }
+                catch(err)
+                {
+                    msg.reply('Error downloading given song');
+                }
+            } else {
+                msg.reply('Cannot find song for the given name');
+            }
+        }).catch((error) => {
+            console.error(error);
+        });
+        
     }else if (msg.body.startsWith('!subject ')) {
         // Change the group subject
         let chat = await msg.getChat();

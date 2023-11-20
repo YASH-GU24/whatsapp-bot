@@ -16,6 +16,8 @@
     "qrcode-terminal": "^0.12.0",
     "tesseract.js": "^5.0.3",
     "text-on-gif": "^2.0.13",
-    "whatsapp-web.js": "^1.23.0"
+    "whatsapp-web.js": "^1.23.0",
+    "yt-search": "^2.10.4",
+    "ytdl-core": "^4.11.5"
   }
 }
