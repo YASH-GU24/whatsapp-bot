@@ -175,7 +175,7 @@ async function get_aukaat_meme(msg){
 
     //create a TextOnGif object
     var gif = new TextOnGif({
-      file_path: "aukaat-aukaat-dikha-di.gif",
+      file_path: "memes/aukaat_dikha_di/aukaat-aukaat-dikha-di.gif",
       alignment_y:"top",
       font_color:"orange",
       font_size:"25px"
@@ -186,7 +186,7 @@ async function get_aukaat_meme(msg){
     return gif.textOnGif({
         text: msg,
         get_as_buffer: false, //set to false to save time
-        write_path: "aukaat_meme.gif"
+        write_path: "memes/aukaat_dikha_di/aukaat_meme.gif"
     });
     
 }

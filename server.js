@@ -2,22 +2,22 @@ const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 const fs = require('fs');
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const { get_reply,get_answer } = require('./gpt_interaction.js');
+const { get_reply, get_answer } = require('./gpt_interaction.js');
 const { MessageMedia } = require('whatsapp-web.js');
-const { get_aukaat_meme,generate_tweet } = require('./meme.js')
-const {download_from_query} = require('./yt_download.js')
-// const client = new Client({
-//     authStrategy: new LocalAuth(),
-//     // proxyAuthentication: { username: 'username', password: 'password' },
-//     puppeteer: { 
-//         // args: ['--proxy-server=proxy-server-that-requires-authentication.example.com'],
-//         headless: false
-//     }
-// });
+const { get_aukaat_meme, generate_tweet } = require('./meme.js')
+const { download_from_query } = require('./yt_download.js')
+const client = new Client({
+    authStrategy: new LocalAuth(),
+    // proxyAuthentication: { username: 'username', password: 'password' },
+    puppeteer: {
+        // args: ['--proxy-server=proxy-server-that-requires-authentication.example.com'],
+        headless: false
+    }
+});
 
-const client = new Client();
+// const client = new Client();
 client.on('qr', qr => {
-    qrcode.generate(qr, {small: true});
+    qrcode.generate(qr, { small: true });
 });
 
 client.on('ready', () => {
@@ -36,7 +36,7 @@ client.on('ready', () => {
 });
 
 client.on('message', async msg => {
-
+    const qm = await msg.getQuotedMessage()
     if (msg.body === '!ping reply') {
         // Send a new message as a reply to the current one
         msg.reply('pong');
@@ -45,114 +45,142 @@ client.on('message', async msg => {
         // Send a new message to the same chat
         client.sendMessage(msg.from, 'pong');
 
-    } 
-    
+    }
+
     else if (msg.body.startsWith('!gpt ')) {
         let message = msg.body.slice(5);
+        if (qm) {
+            message = qm.body + " " + message;
+        }
         response = get_reply(message)
-        response.then((data)=>{
+        response.then((data) => {
             msg.reply(data.choices[0].message.content);
         })
+    }
+    else if (msg.body=='!sticker') {
+        try {
+            if (msg.hasMedia) {
+                console.log("in has media")
+                const media = await msg.downloadMedia();
+                const folder = process.cwd() + '/img/';
+                const filename = folder + 'temp.png';
+                fs.mkdirSync(folder, { recursive: true });
+                fs.writeFileSync(filename, Buffer.from(media.data, 'base64').toString('binary'), 'binary');
+                const mediaData = fs.readFileSync(filename);
+                const sticker = new MessageMedia(
+                    'image/png',
+                    mediaData.toString("base64")
+                );
+                client.sendMessage(msg.from, sticker, { sendMediaAsSticker: true }) 
+            }
+            else if (qm && qm.hasMedia) {
+                msg = qm;
+                const media = await msg.downloadMedia();
+                const folder = process.cwd() + '/img/';
+                const filename = folder + 'temp.png';
+                fs.mkdirSync(folder, { recursive: true });
+                fs.writeFileSync(filename, Buffer.from(media.data, 'base64').toString('binary'), 'binary');
+                const mediaData = fs.readFileSync(filename);
+                const sticker = new MessageMedia(
+                    'image/png',
+                    mediaData.toString("base64")
+                );
+                client.sendMessage(msg.from, sticker, { sendMediaAsSticker: true })
+            }
+            else {
+                msg.reply("Please attach the photo")
+            }
+        } catch (e) {
+            console.log(e)
+        }
     }
     else if (msg.body.startsWith('!tweet ')) {
         const tweetString = msg.body;
 
         const tweetRegex = /^!tweet (\w+) (.+)$/;
-        
+
         // Use the exec method to match the pattern against the tweet string
         const match = tweetRegex.exec(tweetString);
-        
+
         // Check if there is a match
         if (match) {
-          // Extract user_name and body from the matched groups
-          const userName = match[1];
-          const body = match[2];
-          response = generate_tweet(userName,body)
-          response.then(()=>{
-            const mediaData = fs.readFileSync('memes/tweet/tweet.png');
-            const media = new MessageMedia(
-            'image/png',
-            mediaData.toString("base64")
-            );
-            msg.reply(media)
-          })
+            // Extract user_name and body from the matched groups
+            const userName = match[1];
+            const body = match[2];
+            response = generate_tweet(userName, body)
+            response.then(() => {
+                const mediaData = fs.readFileSync('memes/tweet/tweet.png');
+                const media = new MessageMedia(
+                    'image/png',
+                    mediaData.toString("base64")
+                );
+                msg.reply(media)
+            })
         } else {
-          msg.reply('Please follow !tweet <username> <body> format')
+            msg.reply('Please follow !tweet <username> <body> format')
         }
 
     }
-    else if (msg.body=='!answer') {
+    else if (msg.body == '!answer') {
         try {
             const media = await msg.downloadMedia();
             const folder = process.cwd() + '/img/';
-            const filename = folder +  'temp.' + media.mimetype.split('/')[1];
+            const filename = folder + 'temp.' + media.mimetype.split('/')[1];
             fs.mkdirSync(folder, { recursive: true });
             fs.writeFileSync(filename, Buffer.from(media.data, 'base64').toString('binary'), 'binary');
-            response =get_answer(filename)
+            response = get_answer(filename)
             console.log(response)
-            response.then((data)=>{
+            response.then((data) => {
                 msg.reply(data.choices[0].message.content);
             })
         } catch (e) {
-           console.log(e)
+            console.log(e)
         }
     }
     else if (msg.body.startsWith('!aukaat ')) {
         // Direct send a new message to specific id
         let message = msg.body.slice(7);
 
-        let response =  get_aukaat_meme(message)
-        response.then(()=>{
+        let response = get_aukaat_meme(message)
+        response.then(() => {
             function check() {
-            setTimeout(() => {
-                fs.readFile('aukaat_meme.gif', 'utf8', function(err, data) {
-                   if (err) {
-                       // got error reading the file, call check() again
-                       check();
-                   } else {
-                    const mediaData = fs.readFileSync('aukaat_meme.gif');
-                    const media = new MessageMedia(
-                    'image/gif',
-                    mediaData.toString("base64")
-                    );
-                    
-                    msg.reply(media)
-                   }
-                });
-            }, 1000)
-        }
-        check()
+                setTimeout(() => {
+                    fs.readFile('memes/aukaat_dikha_di/aukaat_meme.gif', 'utf8', function (err, data) {
+                        if (err) {
+                            // got error reading the file, call check() again
+                            check();
+                        } else {
+                            const mediaData = fs.readFileSync('memes/aukaat_dikha_di/aukaat_meme.gif');
+                            const media = new MessageMedia(
+                                'image/gif',
+                                mediaData.toString("base64")
+                            );
+
+                            msg.reply(media)
+                        }
+                    });
+                }, 1000)
+            }
+            check()
         })
     }
-    else if (msg.body.startsWith('!sendto ')) {
-        // Direct send a new message to specific id
-        let number = msg.body.split(' ')[1];
-        let messageIndex = msg.body.indexOf(number) + number.length;
-        let message = msg.body.slice(messageIndex, msg.body.length);
-        number = number.includes('@c.us') ? number : `${number}@c.us`;
-        let chat = await msg.getChat();
-        chat.sendSeen();
-        client.sendMessage(number, message);
-
-    } 
     else if (msg.body.startsWith('!song ')) {
         let query = msg.body.slice(6);
         download_from_query(query, 'audio').then((data) => {
-            console.log('data',data);
+            console.log('data', data);
             if (data) {
-                try{
-                const media = MessageMedia.fromFilePath(data+'.mp3')
-                client.sendMessage(msg.from, media, { sendMediaAsDocument: true })
-                fs.unlink(data+'.mp3', (err) => {
-                    if (err) {
-                      console.error(`Error deleting file: ${data}`);
-                    } else {
-                      console.log(`File ${data} deleted successfully`);
-                    }
-                  });
+                try {
+                    const media = MessageMedia.fromFilePath(data + '.mp3')
+                    client.sendMessage(msg.from, media, { sendMediaAsDocument: true })
+                    fs.unlink(data + '.mp3', (err) => {
+                        if (err) {
+                            console.error(`Error deleting file: ${data}`);
+                        } else {
+                            console.log(`File ${data} deleted successfully`);
+                        }
+                    });
                 }
-                catch(err)
-                {
+                catch (err) {
                     msg.reply('Error downloading given song');
                 }
             } else {
@@ -161,8 +189,8 @@ client.on('message', async msg => {
         }).catch((error) => {
             console.error(error);
         });
-        
-    }else if (msg.body.startsWith('!subject ')) {
+
+    } else if (msg.body.startsWith('!subject ')) {
         // Change the group subject
         let chat = await msg.getChat();
         if (chat.isGroup) {
