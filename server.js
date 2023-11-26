@@ -168,7 +168,7 @@ client.on('message', async msg => {
                         try
                         {
                             
-                            await msg.reply(`Answer ${i+1}` + obj[i]["answer"]);
+                            await msg.reply(`Answer ${i+1} ` + obj[i]["answer"]);
                         }
                         catch(err)
                         {

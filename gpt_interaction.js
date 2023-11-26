@@ -33,7 +33,7 @@ async function get_answer(filename) {
 
 async function get_mcqs(question,n)
 {
-  prompt = `For the given question/concept generate ${Math.min(10,5)} questions with 4 options in the format [{"question":str,"options":["option1","option2","option3","option4"],"answer":str},{"question":str,"options":["option1","option2","option3","option4"],"answer":str}...]
+  prompt = `For the given question/concept generate ${Math.min(n,10)} questions with 4 options in the format [{"question":str,"options":["option1","option2","option3","option4"],"answer":str},{"question":str,"options":["option1","option2","option3","option4"],"answer":str}...]
   question: ${question}, 
   Reply only with JSON in above mentioned format`
   const chatCompletion = await openai.chat.completions.create({
