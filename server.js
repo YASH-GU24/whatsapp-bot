@@ -1,8 +1,8 @@
 const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 const fs = require('fs');
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const { get_reply, get_answer } = require('./gpt_interaction.js');
+const { Client, LocalAuth, Poll } = require('whatsapp-web.js');
+const { get_reply, get_answer,get_mcqs } = require('./gpt_interaction.js');
 const { MessageMedia } = require('whatsapp-web.js');
 const { get_aukaat_meme, generate_tweet } = require('./meme.js')
 const { download_from_query } = require('./yt_download.js')
@@ -133,6 +133,53 @@ client.on('message', async msg => {
             response.then((data) => {
                 msg.reply(data.choices[0].message.content);
             })
+        } catch (e) {
+            console.log(e)
+        }
+    }
+    else if (msg.body.startsWith('!get_questions ')) {
+        try {
+            const regexPattern = /^!get_questions (\d+) (.+)$/;
+            inputString = msg.body;
+            // Use the RegExp test method to check if the inputString matches the pattern
+            const match = regexPattern.exec(inputString);
+        
+            // Check if there is a match
+            if (match) {
+                // Extract the number and question from the matched groups
+                const number = parseInt(match[1], 10);
+                const question = match[2];
+                response = get_mcqs(question,number)
+                response.then(async (data) => {
+                    obj = JSON.parse(data.choices[0].message.content)
+                    for (let i = 0; i < obj.length; i++) {
+                        try
+                        {
+                            
+                            await msg.reply(new Poll(obj[i]['question'], obj[i]['options']));
+                        }
+                        catch(err)
+                        {
+                            console.log(err)
+                            continue;
+                        }
+                      }
+                      for (let i = 0; i < obj.length; i++) {
+                        try
+                        {
+                            
+                            await msg.reply(`Answer ${i+1}` + obj[i]["answer"]);
+                        }
+                        catch(err)
+                        {
+                            console.log(err)
+                            continue;
+                        }
+                      }
+                })
+            } else {
+                msg.reply("Please follow the following format !get_questions <some number> <question>")
+            }
         } catch (e) {
             console.log(e)
         }
