@@ -6,6 +6,12 @@ const { get_reply, get_answer,get_mcqs } = require('./gpt_interaction.js');
 const { MessageMedia } = require('whatsapp-web.js');
 const { get_aukaat_meme, generate_tweet } = require('./meme.js')
 const { download_from_query } = require('./yt_download.js')
+const pingHandler = require('./handlers/ping');
+const gptHandler = require('./handlers/gpt');
+const stickerHandler = require('./handlers/sticker');
+const tweetHandler = require('./handlers/tweet');
+const answerHandler = require('./handlers/answer');
+const getQuestionsHandler = require('./handlers/getQuestions');
 const client = new Client({
     authStrategy: new LocalAuth(),
     // proxyAuthentication: { username: 'username', password: 'password' },
@@ -37,152 +43,24 @@ client.on('ready', () => {
 
 client.on('message', async msg => {
     const qm = await msg.getQuotedMessage()
-    if (msg.body === '!ping reply') {
-        // Send a new message as a reply to the current one
-        msg.reply('pong');
+    pingHandler(msg, client);
 
-    } else if (msg.body === '!ping') {
-        // Send a new message to the same chat
-        client.sendMessage(msg.from, 'pong');
+    // ... rest of the message handling code ...
 
-    }
-
-    else if (msg.body.startsWith('!gpt ')) {
-        let message = msg.body.slice(5);
-        if (qm) {
-            message = qm.body + " " + message;
-        }
-        response = get_reply(message)
-        response.then((data) => {
-            msg.reply(data.choices[0].message.content);
-        })
+    if (msg.body.startsWith('!gpt ')) {
+        gptHandler(msg, client);
     }
     else if (msg.body=='!sticker') {
-        try {
-            if (msg.hasMedia) {
-                console.log("in has media")
-                const media = await msg.downloadMedia();
-                const folder = process.cwd() + '/img/';
-                const filename = folder + 'temp.png';
-                fs.mkdirSync(folder, { recursive: true });
-                fs.writeFileSync(filename, Buffer.from(media.data, 'base64').toString('binary'), 'binary');
-                const mediaData = fs.readFileSync(filename);
-                const sticker = new MessageMedia(
-                    'image/png',
-                    mediaData.toString("base64")
-                );
-                client.sendMessage(msg.from, sticker, { sendMediaAsSticker: true }) 
-            }
-            else if (qm && qm.hasMedia) {
-                msg = qm;
-                const media = await msg.downloadMedia();
-                const folder = process.cwd() + '/img/';
-                const filename = folder + 'temp.png';
-                fs.mkdirSync(folder, { recursive: true });
-                fs.writeFileSync(filename, Buffer.from(media.data, 'base64').toString('binary'), 'binary');
-                const mediaData = fs.readFileSync(filename);
-                const sticker = new MessageMedia(
-                    'image/png',
-                    mediaData.toString("base64")
-                );
-                client.sendMessage(msg.from, sticker, { sendMediaAsSticker: true })
-            }
-            else {
-                msg.reply("Please attach the photo")
-            }
-        } catch (e) {
-            console.log(e)
-        }
+        stickerHandler(msg);
     }
     else if (msg.body.startsWith('!tweet ')) {
-        const tweetString = msg.body;
-
-        const tweetRegex = /^!tweet (\w+) (.+)$/;
-
-        // Use the exec method to match the pattern against the tweet string
-        const match = tweetRegex.exec(tweetString);
-
-        // Check if there is a match
-        if (match) {
-            // Extract user_name and body from the matched groups
-            const userName = match[1];
-            const body = match[2];
-            response = generate_tweet(userName, body)
-            response.then(() => {
-                const mediaData = fs.readFileSync('memes/tweet/tweet.png');
-                const media = new MessageMedia(
-                    'image/png',
-                    mediaData.toString("base64")
-                );
-                msg.reply(media)
-            })
-        } else {
-            msg.reply('Please follow !tweet <username> <body> format')
-        }
-
+        tweetHandler(msg, client);
     }
     else if (msg.body == '!answer') {
-        try {
-            const media = await msg.downloadMedia();
-            const folder = process.cwd() + '/img/';
-            const filename = folder + 'temp.' + media.mimetype.split('/')[1];
-            fs.mkdirSync(folder, { recursive: true });
-            fs.writeFileSync(filename, Buffer.from(media.data, 'base64').toString('binary'), 'binary');
-            response = get_answer(filename)
-            console.log(response)
-            response.then((data) => {
-                msg.reply(data.choices[0].message.content);
-            })
-        } catch (e) {
-            console.log(e)
-        }
+        answerHandler(msg, client);
     }
     else if (msg.body.startsWith('!get_questions ')) {
-        try {
-            const regexPattern = /^!get_questions (\d+) (.+)$/;
-            inputString = msg.body;
-            // Use the RegExp test method to check if the inputString matches the pattern
-            const match = regexPattern.exec(inputString);
-        
-            // Check if there is a match
-            if (match) {
-                // Extract the number and question from the matched groups
-                const number = parseInt(match[1], 10);
-                const question = match[2];
-                response = get_mcqs(question,number)
-                response.then(async (data) => {
-                    obj = JSON.parse(data.choices[0].message.content)
-                    for (let i = 0; i < obj.length; i++) {
-                        try
-                        {
-                            
-                            await msg.reply(new Poll(obj[i]['question'], obj[i]['options']));
-                        }
-                        catch(err)
-                        {
-                            console.log(err)
-                            continue;
-                        }
-                      }
-                      for (let i = 0; i < obj.length; i++) {
-                        try
-                        {
-                            
-                            await msg.reply(`Answer ${i+1} ` + obj[i]["answer"]);
-                        }
-                        catch(err)
-                        {
-                            console.log(err)
-                            continue;
-                        }
-                      }
-                })
-            } else {
-                msg.reply("Please follow the following format !get_questions <some number> <question>")
-            }
-        } catch (e) {
-            console.log(e)
-        }
+        getQuestionsHandler(msg, client);
     }
     else if (msg.body.startsWith('!aukaat ')) {
         // Direct send a new message to specific id
