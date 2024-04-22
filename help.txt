@@ -1,0 +1,9 @@
+You can use following commands:-
+!llm <prompt> :- Get gpt response for the prompt
+!sticker :- Convert quoted image to sticker
+!song <name> :- Download any song with its name
+!reel <link> :- Download any reel through its link
+!yt <link> :- Download any youtube video through its link 
+!tweet <username> <content> :- Generate a fake tweet
+!ascii <text> :- Generate ascii art for text
+!get_question <number_of_questions> <topic> :- get few questions on some topic through polls
